@@ -1,6 +1,6 @@
 ---
 title: "Tidyverse Census Assignment"
-author: "Your Name Here"
+author: "Brooks Rupar"
 format: html
 ---
 
@@ -35,9 +35,11 @@ You'll need your Census API Key:
 
 ```{r echo=FALSE}
 
-myapikey <- "YOUR API KEY"
+myapikey <- "2a6f8c21a30d3024e038d67d7d4eba647dc79cd4"
 
-census_api_key(myapikey, overwrite=TRUE)
+census_api_key(myapikey, overwrite=TRUE, install = TRUE)
+
+readRenviron("~/.Renviron")
 ```
 
 ## Load and view ACS variables
@@ -48,6 +50,7 @@ You'll also need to load the list of American Community Survey variables from th
 
 ```{r}
 
+Five_Year_ACS <- load_variables(2021, "acs5", cache = TRUE)
 
 ```
 
@@ -56,24 +59,26 @@ You'll also need to load the list of American Community Survey variables from th
 **Q1** What is the Maryland jurisdiction with the lowest median age, according to the ACS 2021 5-year estimates? You will need to find the variable for median age first. 
 
 ```{r}
+medage <- "B01002_001E"
 
-
-
+MedianAgeMaryland <- 
+  get_acs(geography = "county", 
+        variables = medage,
+        state = "MD")
 
 
 
 ```
+##Answer: Baltimore City Maryland
 
 
 **Q2** Which Maryland counties have a median age of at least 50? You can use the dataframe you just made to answer this, but you must write code to display only those counties with a median age of at least 50. 
 
 ```{r}
-
-
-
-
+MedianAgeMarylandFiltered <- MedianAgeMaryland %>% 
+  filter(estimate >= 50)
 ```
-
+##ANSWER: Talbot and Worcester Counties
 
 **Q3** We're interested in knowing which Maryland counties have the highest percentage of 5-17 year-olds who speak Spanish at home and *also* speak English fluently. Start with the code you wrote for Q1 and alter it to show the total population of 5-17 year-olds by county. Then create a second dataframe to show the number of 5-17 year-olds by county living in homes where Spanish is spoken but who speak English "very well" according to the ACS. To do this, you will need to find the ACS variables that represent those subjects. HINT: the phrase "very well" shows up in multiple variables - you want the one that doesn't include other factors like citizenship.
 
@@ -82,24 +87,63 @@ For each dataframe, rename the `estimate` column to a meaningful name you've giv
 Which county has the highest percentage of 5-17 year-olds who speak Spanish at home and also speak English very well?
 
 ```{r}
+##Creating Total Population
+fivetoseventeenmale <- ("B01001_006E")
+fivetoseventeenfemale <- "B01001_030E"
 
+totalteenmale <-
+  get_acs(geography = "county",
+          variables = c(fivetoseventeenmale),
+          state = "MD")
+totalteenmale <-
+  rename(totalteenmale, malepop = estimate)
+totalteenmale <-
+  subset(totalteenmale, select = -c(variable, moe) )
 
+totalteenfemale <-
+  get_acs(geography = "county",
+          variables = c(fivetoseventeenfemale),
+          state = "MD")
+totalteenfemale <-
+  rename(totalteenfemale, femalepop = estimate)
+totalteenfemale <-
+  subset(totalteenfemale, select = -c(variable, moe) )
 
+totalteenpop <-
+  left_join(totalteenmale, totalteenfemale)
 
+totalteenpop <-
+  rowwise(totalteenpop) %>% 
+  mutate(totalpop=sum(malepop, femalepop, na.rm = T))
+  
+  totalteenpop <-
+  subset(totalteenpop, select = -c(malepop, femalepop))
 
+  
+#Creating Spanish Population
+spanhome_engverywell <- "B16004_005E"
 
+TeensLanguage <- 
+  get_acs(geography = "county", 
+        variables = c(spanhome_engverywell),
+        state = "MD")
 
+##Creating final table
+
+TeensLanguage <-
+  left_join(TeensLanguage, totalteenpop) %>% 
+  mutate(TeensLanguage, percent = (percent = (estimate/totalpop) * 100))
 
 
 
 
 
 ```
-
+##ANSWER: PG County
 
 **Q4** Given the counties with the largest percentage of 5-17 year-olds that speak Spanish at home, which county stands out to you in the data as different from the others? How would you describe the top 5 counties? How would you describe Garrett County's numbers?
 
-PUT ANSWER HERE
+##PG County stands out because of its high percentage, the top five counties are pretty varied, with three being high population and two being low population. Garrett county's numbers are quite low as it has one of the lowest populations in the state
 
 
 
@@ -114,12 +158,17 @@ Join the ZCTA dataframe to the zip totals dataframe and calculate a per capita r
 -   What's the most interesting one from this last result?
 
 ```{r}
+Pennslyvania <- load_variables(2019, "acs1", cache = TRUE)
 
 
+median_income <- "B07011_001E"
+median_income <- 
+  get_acs(geography = 'zcta', 
+        variables = c(median_income, total_pop,),
+        state = "PA")
 
 
-
-
+##Had trouble, completed in class
 
 
 ```
